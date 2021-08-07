@@ -1,0 +1,14 @@
+# mysql
+mysql/
+
+# .env
+.env
+
+# wordpress
+wordpress/
+
+# certs
+certs/
+
+# nginx/log
+nginx/log/

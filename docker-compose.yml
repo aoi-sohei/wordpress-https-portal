@@ -1,0 +1,67 @@
+##
+# 構成: MySQL5.7 + WordPress + PHP7.3-fpm + Nginx + https-portal
+version: '3'
+services:
+  # https-portalサービス
+  https-portal:
+    image: steveltn/https-portal
+    ports:
+      - "80:80"
+      - "443:443"
+    links:
+      - nginx
+    depends_on:
+      - nginx
+    restart: always
+    environment:
+      STAGE: 'production'
+      DOMAINS: '${SUB_DOMAIN} => ${MAIN_DOMAIN}, ${MAIN_DOMAIN} -> http://nginx'
+      PROXY_CONNECT_TIMEOUT: 120
+      PROXY_SEND_TIMEOUT: 120
+      PROXY_READ_TIMEOUT: 120
+      WORKER_PROCESSES: auto
+      WORKER_CONNECTIONS: 2048
+      CLIENT_MAX_BODY_SIZE: '1024M'
+    volumes:
+      - ./certs:/var/lib/https-portal
+
+
+  # MySQLサービス
+  mysql:
+    image: mysql:5.7
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+    restart: always
+
+  # WordPress+PHP7.3-FPMサービス
+  wordpress:
+    image: wordpress:php7.3-fpm
+    environment:
+      - WORDPRESS_DB_HOST=${WORDPRESS_DB_HOST}
+      - WORDPRESS_DB_USER=${WORDPRESS_DB_USER}
+      - WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+      - WORDPRESS_DB_NAME=${WORDPRESS_DB_NAME}
+    volumes:
+      - ./wordpress:/var/www/html
+    depends_on:
+      - mysql
+    restart: always
+
+  # Nginxサービス
+  nginx:
+    image: nginx:stable
+    links:
+      - wordpress
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/log:/var/log/nginx
+      - ./wordpress:/var/www/html
+    depends_on:
+      - wordpress
+    restart: always
